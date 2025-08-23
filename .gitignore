@@ -11,3 +11,9 @@ __pycache__/
 
 # Sqlite Database
 *.db
+
+# Alembic migrations
+migrations/
+alembic/versions/
+alembic.ini
+alembic.ini.
