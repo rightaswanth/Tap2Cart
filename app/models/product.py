@@ -1,9 +1,8 @@
 import uuid
 import datetime
-from sqlalchemy import create_engine, Column, String, DateTime, Integer, Boolean, Numeric, ForeignKey
-from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy import Column, String, DateTime, Integer, Boolean, Numeric, ForeignKey
+from sqlalchemy.orm import relationship
 from app.core.database import Base
-
 
 
 class Category(Base):
@@ -23,8 +22,17 @@ class Category(Base):
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
     # Relationships: one-to-many (Category -> Subcategory, Category -> Product)
-    subcategories = relationship("Subcategory", back_populates="category")
-    products = relationship("Product", back_populates="category")
+    subcategories = relationship(
+        "Subcategory",
+        back_populates="category",
+        lazy="selectin"      # 🔹 CHANGED
+    )
+    products = relationship(
+        "Product",
+        back_populates="category",
+        lazy="selectin"      # 🔹 CHANGED
+    )
+
 
 class Subcategory(Base):
     """
@@ -41,8 +49,11 @@ class Subcategory(Base):
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
     # Relationships: many-to-one (Subcategory -> Category)
-    category = relationship("Category", back_populates="subcategories")
-    products = relationship("Product", back_populates="subcategory")
+    category = relationship(
+        "Category",
+        back_populates="subcategories",
+        lazy="selectin"      # 🔹 CHANGED
+    )
 
 class Product(Base):
     """
@@ -60,11 +71,14 @@ class Product(Base):
     
     # Foreign keys for category and subcategory
     category_id = Column(String, ForeignKey('categories.category_id'))
-    subcategory_id = Column(String, ForeignKey('subcategories.subcategory_id'), nullable=True)
+    # subcategory_id = Column(String, ForeignKey('subcategories.subcategory_id'), nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
     # Relationships: many-to-one (Product -> Category, Product -> Subcategory)
-    category = relationship("Category", back_populates="products")
-    subcategory = relationship("Subcategory", back_populates="products")
+    category = relationship(
+        "Category",
+        back_populates="products",
+        lazy="selectin"      
+    )

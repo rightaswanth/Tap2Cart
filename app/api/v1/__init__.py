@@ -1,8 +1,17 @@
 from fastapi import APIRouter
 
 from .endpoints import products
+from .endpoints import category
+from .endpoints import orders
+from .endpoints import cart
+from .endpoints import admin
+
 
 v1_router = APIRouter()
 
 # v1_router.include_router(whatsapp.router, prefix="/whatsapp", tags=["whatsapp"])
 v1_router.include_router(products.router, prefix="/products", tags=["products"])
+v1_router.include_router(category.router, prefix="/category", tags=["category"])
+v1_router.include_router(orders.router, prefix="/orders", tags=["orders"])
+v1_router.include_router(cart.router, prefix="/cart", tags=["cart"])
+v1_router.include_router(admin.router, prefix="/admin", tags=["admin"])
