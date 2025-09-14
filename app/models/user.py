@@ -25,6 +25,9 @@ class User(Base):
     addresses = relationship("Address", back_populates="user")
     orders = relationship("Order", back_populates="user")
 
+    # Add this if CartItem or Cart has back_populates="user"
+    cart_items = relationship("CartItem", back_populates="user")
+
 class Address(Base):
     """
     SQLAlchemy model for the 'addresses' table.
