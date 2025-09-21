@@ -71,7 +71,7 @@ class Product(Base):
     
     # Foreign keys for category and subcategory
     category_id = Column(String, ForeignKey('categories.category_id'))
-    # subcategory_id = Column(String, ForeignKey('subcategories.subcategory_id'), nullable=True)
+    subcategory_id = Column(String, ForeignKey('subcategories.subcategory_id'), nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
