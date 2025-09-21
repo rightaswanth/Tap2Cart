@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 from pydantic_settings import BaseSettings
 
 
@@ -26,13 +26,9 @@ class Settings(BaseSettings):
     database_url: str
 
     # WhatsApp API (Twilio)
-    twilio_account_sid: str
-    twilio_auth_token: str
-    twilio_whatsapp_number: str
-
-    # Restaurant / Business settings
-    restaurant_name: str
-    delivery_radius_km: float
+    twilio_account_sid: Optional[str] = None
+    twilio_auth_token: Optional[str] = None
+    twilio_whatsapp_number: Optional[str] = None
 
     class Config:
         env_file = env_path

@@ -2,6 +2,9 @@
 .venv/
 venv/
 
+# Vs code 
+.vscode/
+
 # Environment vars
 .env
 
