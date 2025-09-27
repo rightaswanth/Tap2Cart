@@ -21,7 +21,10 @@ class Settings(BaseSettings):
     environment: str  # development / staging / production
     allowed_origins: List[str]
 
-
+    secret_key: str
+    restaurant_name: str
+    delivery_radius_km: float
+    
     # Database
     database_url: str
 

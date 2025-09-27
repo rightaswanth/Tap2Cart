@@ -4,7 +4,7 @@ from typing import List
 
 from app.services.category import CategoryService, SubcategoryService
 from app.schemas.category import (
-    CategoryResponse, CategoryCreate, CategoryUpdate,
+    CategoryResponse, CategoryCreate, CategoryUpdate, ProductOut,
     SubcategoryResponse, SubcategoryCreate, SubcategoryUpdate
 )
 from app.core.database import get_db  
@@ -50,7 +50,7 @@ async def delete_category(category_id: str, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Category not found")
     return
 
-@router.get("/{category_id}/products", summary="Get products in a category")
+@router.get("/{category_id}/products", summary="Get products in a category", response_model=List[ProductOut])
 async def get_category_products(
     category_id: str,
     skip: int = Query(0, ge=0),

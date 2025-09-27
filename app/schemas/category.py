@@ -1,3 +1,4 @@
+import uuid
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
@@ -83,3 +84,14 @@ class CategoryResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ProductOut(BaseModel):
+    product_id: str
+    product_name: str
+    price: float
+    description: Optional[str] = None
+
+    class Config:
+        orm_mode = True 
+        
