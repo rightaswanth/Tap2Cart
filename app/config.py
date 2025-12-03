@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     twilio_auth_token: Optional[str] = None
     twilio_whatsapp_number: Optional[str] = None
 
+    # Redis
+    redis_url: str = "redis://localhost:6379/0"
+
     class Config:
         env_file = env_path
         env_file_encoding = "utf-8"

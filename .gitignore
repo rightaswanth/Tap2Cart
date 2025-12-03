@@ -16,7 +16,7 @@ __pycache__/
 *.db
 
 # Alembic migrations
-migrations/
-alembic/versions/
-alembic.ini
-alembic.ini.
+# migrations/
+# alembic/versions/
+# alembic.ini
+# alembic.ini.

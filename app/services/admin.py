@@ -1,9 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc, text
 from sqlalchemy.orm import selectinload
-from app.models.user import User  # Assuming you have this
+from app.models.user import User
 from app.models.product import Product
-from app.models.order import Order
+from app.models.order import Order, OrderItem
 from app.models.product import Category
 from app.schemas.admin import (
     DashboardStats, UserSummary, ProductSummary, OrderSummary, 
@@ -14,8 +14,34 @@ from decimal import Decimal
 import datetime
 import psutil
 import time
+from app.core.security import verify_password, create_access_token
+from app.core.redis import redis_client
 
 class AdminService:
+
+    @staticmethod
+    async def authenticate_admin(db: AsyncSession, username: str, password: str) -> Optional[str]:
+        """Authenticate admin and return access token."""
+        result = await db.execute(select(User).where(User.username == username, User.role == 'admin'))
+        user = result.scalar_one_or_none()
+        
+        if not user or not user.password_hash:
+            return None
+            
+        if not verify_password(password, user.password_hash):
+            return None
+            
+        # Create access token
+        access_token = create_access_token(subject=user.user_id)
+        return access_token
+
+    @staticmethod
+    async def logout_admin(token: str) -> bool:
+        """Logout admin by blacklisting the token."""
+        # Set expiry to match token expiry (default 30 mins = 1800 seconds)
+        # In a real app, you'd extract exp from token, but for now we'll use a safe default
+        await redis_client.setex(f"blacklist:{token}", 3600, "true")
+        return True
     
     @staticmethod
     async def get_dashboard_stats(db: AsyncSession) -> DashboardStats:
