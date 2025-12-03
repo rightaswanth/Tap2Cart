@@ -61,3 +61,11 @@ class SystemHealth(BaseModel):
     active_sessions: int
     memory_usage: str
     uptime: str
+
+class AdminLogin(BaseModel):
+    username: str
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str

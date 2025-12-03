@@ -1,13 +1,44 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import desc, func, select
 from app.core.database import get_db
-from app.core.dependencies import get_current_admin_user, get_current_user
+from app.core.dependencies import get_current_admin_user, get_current_user, security
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.order import Order
 from app.models.product import Product
 from app.services.admin import AdminService
+from app.schemas.admin import AdminLogin, Token
 
 router = APIRouter(tags=["admin"])
+
+@router.post("/login", response_model=Token, summary="Admin Login")
+async def login_admin(
+    login_data: AdminLogin,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Admin login with username and password.
+    Returns JWT access token.
+    """
+    token = await AdminService.authenticate_admin(db, login_data.username, login_data.password)
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return {"access_token": token, "token_type": "bearer"}
+
+@router.post("/logout", summary="Admin Logout")
+async def logout_admin(
+    token: HTTPAuthorizationCredentials = Depends(security),
+    current_user: dict = Depends(get_current_admin_user)
+):
+    """
+    Logout admin by blacklisting the token.
+    """
+    await AdminService.logout_admin(token.credentials)
+    return {"message": "Successfully logged out"}
 
 @router.get("/dashboard", summary="Get dashboard statistics")
 async def get_dashboard(

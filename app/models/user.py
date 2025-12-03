@@ -14,12 +14,21 @@ class User(Base):
     __tablename__ = 'users'
 
     user_id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    whatsapp_id = Column(String(28), unique=True, index=True)
-    email = Column(String(50))
-    phone_number = Column(String(20))
+    
+    # Common fields
+    role = Column(String(20), default="user")  # 'admin' or 'user'
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+    # User specific fields (Regular User)
+    whatsapp_id = Column(String(28), unique=True, index=True, nullable=True)
+    phone_number = Column(String(20), unique=True, index=True, nullable=True)
+    email = Column(String(50), nullable=True) # Optional for regular users
+
+    # Admin specific fields
+    username = Column(String(50), unique=True, index=True, nullable=True)
+    password_hash = Column(String, nullable=True)
 
     # Relationships: one-to-many (User -> Addresses, User -> Orders)
     addresses = relationship("Address", back_populates="user")
