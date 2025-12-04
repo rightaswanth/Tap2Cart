@@ -109,13 +109,48 @@ async def create_product(
     return await ProductService.create_product(db, product_data)
 
 @router.put("/{product_id}", response_model=ProductBase, summary="Update an existing product")
-async def update_product(product_id: str, product_data: ProductUpdate, db: Session = Depends(get_db)):
+async def update_product(
+    product_id: str,
+    product_name: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    price: Optional[float] = Form(None),
+    stock_quantity: Optional[int] = Form(None),
+    category_id: Optional[str] = Form(None),
+    subcategory_id: Optional[str] = Form(None),
+    is_active: Optional[bool] = Form(None),
+    image: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_admin_user)
+):
     """
     Endpoint to update an existing product.
+    Supports optional image update via file upload.
+    Only accessible to admins.
     """
-    updated_product = await ProductService.update_product(db, product_id, product_data)
-    if not updated_product:
+    # Check if product exists first
+    existing_product = await ProductService.get_product_by_id(db, product_id)
+    if not existing_product:
         raise HTTPException(status_code=404, detail="Product not found")
+
+    image_url = existing_product.image_url
+    if image:
+        # Upload new image to S3 if provided
+        s3_service = S3Service()
+        image_url = await s3_service.upload_file(image)
+
+    # Create update data object
+    product_data = ProductUpdate(
+        product_name=product_name,
+        description=description,
+        price=price,
+        stock_quantity=stock_quantity,
+        category_id=category_id,
+        subcategory_id=subcategory_id,
+        is_active=is_active,
+        image_url=image_url
+    )
+
+    updated_product = await ProductService.update_product(db, product_id, product_data)
     return updated_product
 
 @router.delete("/{product_id}", status_code=204, summary="Delete a product")
