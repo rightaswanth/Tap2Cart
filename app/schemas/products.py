@@ -11,6 +11,10 @@ class ProductBase(BaseModel):
     price: float
     description: str
     image_url: Optional[str] = None
+    category_id: str
+    category_name: Optional[str] = None
+    subcategory_id: Optional[str] = None
+    subcategory_name: Optional[str] = None
     
     model_config = ConfigDict(from_attributes=True)
 

@@ -24,7 +24,11 @@ class ProductService:
         """
         Retrieves and filters products with pagination.
         """
-        stmt = select(Product).where(Product.is_active == True)
+        from sqlalchemy.orm import selectinload
+        stmt = select(Product).options(
+            selectinload(Product.category),
+            selectinload(Product.subcategory)
+        ).where(Product.is_active == True)
 
         if category:
             stmt = stmt.where(Product.category_id == category)
