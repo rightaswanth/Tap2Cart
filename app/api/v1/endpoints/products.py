@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
+from app.services.s3 import S3Service
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Dict, List, Optional, Union
 
@@ -70,16 +71,41 @@ async def get_product(product_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Product not found")
     return product
 
+
+
 @router.post("/", response_model=ProductBase, status_code=201, summary="Create a new product")
 async def create_product(
-    product_data: ProductCreate,
+    product_name: str = Form(...),
+    description: str = Form(...),
+    price: float = Form(...),
+    stock_quantity: int = Form(...),
+    category_id: str = Form(...),
+    subcategory_id: Optional[str] = Form(None),
+    is_active: bool = Form(True),
+    image: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_admin_user)
 ):
     """
-    Endpoint to create a new product.
+    Endpoint to create a new product with image upload.
     Only accessible to admins.
     """
+    # Upload image to S3
+    s3_service = S3Service()
+    image_url = await s3_service.upload_file(image)
+    
+    # Create product data object
+    product_data = ProductCreate(
+        product_name=product_name,
+        description=description,
+        price=price,
+        stock_quantity=stock_quantity,
+        category_id=category_id,
+        subcategory_id=subcategory_id,
+        is_active=is_active,
+        image_url=image_url
+    )
+    
     return await ProductService.create_product(db, product_data)
 
 @router.put("/{product_id}", response_model=ProductBase, summary="Update an existing product")
