@@ -82,3 +82,8 @@ class Product(Base):
         back_populates="products",
         lazy="selectin"      
     )
+    
+    subcategory = relationship(
+        "Subcategory",
+        lazy="selectin"
+    )
