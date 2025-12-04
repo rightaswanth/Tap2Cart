@@ -60,7 +60,11 @@ class ProductService:
         """
         Retrieves a single product by its ID.
         """
-        stmt = select(Product).where(Product.product_id == product_id)
+        from sqlalchemy.orm import selectinload
+        stmt = select(Product).options(
+            selectinload(Product.category),
+            selectinload(Product.subcategory)
+        ).where(Product.product_id == product_id)
         result = await db.execute(stmt)
         return result.scalars().first()
 
