@@ -34,7 +34,8 @@ class S3Service:
                 self.bucket_name,
                 unique_filename,
                 ExtraArgs={
-                    "ContentType": file.content_type
+                    "ContentType": file.content_type,
+                    "ACL": "public-read"
                 }
             )
 
