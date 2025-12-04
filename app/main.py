@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 
 app = FastAPI(title=settings.project_name, debug=settings.debug)
 
@@ -36,10 +37,10 @@ app.include_router(v1_router, prefix="/api/v1")
 async def validation_exception_handler(request, exc):
     return JSONResponse(
         status_code=422,
-        content={
+        content=jsonable_encoder({
             "detail": exc.errors(),
-            "body": exc.body.decode() if isinstance(exc.body, bytes) else exc.body
-        }
+            "body": exc.body
+        })
     )
 
 @app.on_event("startup")
