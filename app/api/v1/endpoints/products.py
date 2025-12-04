@@ -6,6 +6,7 @@ from fastapi import Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.dependencies import get_current_admin_user
 from app.models.product import Category, Product, Subcategory
 from app.schemas.products import CategoryResponse, ProductBase, ProductCreate, ProductResponse, ProductUpdate, SubcategoryResponse
 from app.services.products import ProductService
@@ -70,9 +71,14 @@ async def get_product(product_id: str, db: Session = Depends(get_db)):
     return product
 
 @router.post("/", response_model=ProductBase, status_code=201, summary="Create a new product")
-async def create_product(product_data: ProductCreate, db: Session = Depends(get_db)):
+async def create_product(
+    product_data: ProductCreate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_admin_user)
+):
     """
     Endpoint to create a new product.
+    Only accessible to admins.
     """
     return await ProductService.create_product(db, product_data)
 
