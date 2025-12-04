@@ -73,7 +73,18 @@ async def get_product(product_id: str, db: Session = Depends(get_db)):
     product = await ProductService.get_product_by_id(db, product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
-    return product
+    
+    return ProductBase(
+        product_id=product.product_id,
+        product_name=product.product_name,
+        price=float(product.price),
+        description=product.description,
+        image_url=product.image_url,
+        category_id=product.category_id,
+        category_name=product.category.category_name if product.category else None,
+        subcategory_id=product.subcategory_id,
+        subcategory_name=product.subcategory.subcategory_name if product.subcategory else None
+    )
 
 
 

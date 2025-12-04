@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.database import get_db
 from app.services.cart import CartService
 from app.schemas.cart import CartItemAdd, CartItemUpdate, CartItemResponse, CartSummary
 from app.core.database import get_db
@@ -14,11 +14,11 @@ security = HTTPBearer()
 @router.post("/add", response_model=CartItemResponse, status_code=201, summary="Add item to cart")
 async def add_to_cart(
     cart_data: CartItemAdd,
-    current_user: dict = Depends(get_current_user),
+    user_id: str,  # Added user_id as query param
     db: AsyncSession = Depends(get_db)
 ):
     """Add item to cart. If item already exists, quantity will be increased."""
-    cart_item = await CartService.add_item_to_cart(db, current_user["user_id"], cart_data)
+    cart_item = await CartService.add_item_to_cart(db, user_id, cart_data)
     if not cart_item:
         raise HTTPException(status_code=400, detail="Product not found or inactive")
     
@@ -37,11 +37,11 @@ async def add_to_cart(
 
 @router.get("/", response_model=CartSummary, summary="Get cart items")
 async def get_cart(
-    current_user: dict = Depends(get_current_user),
+    user_id: str, # Added user_id as query param
     db: AsyncSession = Depends(get_db)
 ):
     """Get all items in user's cart with summary information."""
-    cart_items = await CartService.get_user_cart(db, current_user["user_id"])
+    cart_items = await CartService.get_user_cart(db, user_id)
     cart_summary = await CartService.calculate_cart_summary(cart_items)
     
     response_items = []
@@ -68,11 +68,11 @@ async def get_cart(
 async def update_cart_item(
     cart_item_id: str,
     cart_data: CartItemUpdate,
-    current_user: dict = Depends(get_current_user),
+    user_id: str, # Added user_id as query param
     db: AsyncSession = Depends(get_db)
 ):
     """Update cart item quantity."""
-    cart_item = await CartService.update_cart_item(db, cart_item_id, current_user["user_id"], cart_data)
+    cart_item = await CartService.update_cart_item(db, cart_item_id, user_id, cart_data)
     if not cart_item:
         raise HTTPException(status_code=404, detail="Cart item not found")
     
@@ -92,10 +92,10 @@ async def update_cart_item(
 @router.delete("/{cart_item_id}", status_code=204, summary="Remove item from cart")
 async def remove_cart_item(
     cart_item_id: str,
-    current_user: dict = Depends(get_current_user),
+    user_id: str, # Added user_id as query param
     db: AsyncSession = Depends(get_db)
 ):
     """Remove item from cart."""
-    success = await CartService.remove_cart_item(db, cart_item_id, current_user["user_id"])
+    success = await CartService.remove_cart_item(db, cart_item_id, user_id)
     if not success:
         raise HTTPException(status_code=404, detail="Cart item not found")
