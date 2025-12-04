@@ -28,3 +28,6 @@ redis==5.0.1
 
 # Twilio (WhatsApp)
 twilio==9.6.4
+
+# AWS S3
+boto3==1.34.0
