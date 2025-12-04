@@ -157,11 +157,15 @@ async def update_product(
     updated_product = await ProductService.update_product(db, product_id, product_data)
     return updated_product
 
-@router.delete("/{product_id}", status_code=204, summary="Delete a product")
-async def delete_product(product_id: str, db: Session = Depends(get_db)):
+@router.delete("/{product_id}", status_code=200, summary="Delete a product")
+async def delete_product(
+    product_id: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_admin_user)
+):
     """
     Endpoint to delete a product.
     """
     if not await ProductService.delete_product(db, product_id):
         raise HTTPException(status_code=404, detail="Product not found")
-    return
+    return {"message": "Product deleted successfully"}
