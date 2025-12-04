@@ -54,6 +54,22 @@ class SubcategoryResponse(BaseModel):
         from_attributes = True
 
 
+class CategoryDropdownResponse(BaseModel):
+    category_id: str
+    category_name: str
+
+    class Config:
+        from_attributes = True
+
+
+class SubcategoryDropdownResponse(BaseModel):
+    subcategory_id: str
+    subcategory_name: str
+
+    class Config:
+        from_attributes = True
+
+
 class ProductResponse(BaseModel):
     product_id: str
     product_name: str

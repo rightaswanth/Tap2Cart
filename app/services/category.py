@@ -120,7 +120,14 @@ class CategoryService:
         )
         result = await db.execute(stmt)
         return result.scalars().all()
-
+    @staticmethod
+    async def get_categories_dropdown(db: AsyncSession) -> List[Category]:
+        """
+        Retrieves all active categories for dropdowns (id and name).
+        """
+        stmt = select(Category).where(Category.is_active == True).order_by(Category.category_name)
+        result = await db.execute(stmt)
+        return result.scalars().all()
 
 class SubcategoryService:
 
@@ -209,3 +216,16 @@ class SubcategoryService:
         await db.delete(subcategory)
         await db.commit()
         return True
+
+    @staticmethod
+    async def get_subcategories_dropdown(db: AsyncSession, category_id: Optional[str] = None) -> List[Subcategory]:
+        """
+        Retrieves active subcategories for dropdowns.
+        """
+        stmt = select(Subcategory).where(Subcategory.is_active == True)
+        if category_id:
+            stmt = stmt.where(Subcategory.category_id == category_id)
+        
+        stmt = stmt.order_by(Subcategory.subcategory_name)
+        result = await db.execute(stmt)
+        return result.scalars().all()

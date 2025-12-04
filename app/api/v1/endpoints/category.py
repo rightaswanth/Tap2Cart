@@ -1,17 +1,25 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List
+from typing import List, Optional
 
 from app.services.category import CategoryService, SubcategoryService
 from app.schemas.category import (
     CategoryResponse, CategoryCreate, CategoryUpdate, ProductOut,
-    SubcategoryResponse, SubcategoryCreate, SubcategoryUpdate
+    SubcategoryResponse, SubcategoryCreate, SubcategoryUpdate,
+    CategoryDropdownResponse, SubcategoryDropdownResponse
 )
 from app.core.database import get_db  
 
 router = APIRouter(tags=["category"])
 
 # ------------------ Category Endpoints ------------------
+
+@router.get("/dropdown", response_model=List[CategoryDropdownResponse], summary="Get categories for dropdown")
+async def get_categories_dropdown(db: AsyncSession = Depends(get_db)):
+    """
+    Get all active categories with only ID and name.
+    """
+    return await CategoryService.get_categories_dropdown(db)
 
 @router.get("/", response_model=List[CategoryResponse], summary="Get all categories")
 async def get_categories(
@@ -86,6 +94,16 @@ async def create_subcategory(category_id: str, subcategory_data: SubcategoryCrea
     if not subcategory:
         raise HTTPException(status_code=404, detail="Parent category not found")
     return subcategory
+
+@router.get("/subcategories/dropdown", response_model=List[SubcategoryDropdownResponse], summary="Get subcategories for dropdown")
+async def get_subcategories_dropdown(
+    category_id: str = Query(..., description="Category ID to filter subcategories"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get active subcategories for a specific category (ID and name only).
+    """
+    return await SubcategoryService.get_subcategories_dropdown(db, category_id)
 
 @router.get("/subcategories/all", response_model=List[SubcategoryResponse], summary="Get all subcategories")
 async def get_all_subcategories(
