@@ -57,7 +57,11 @@ async def get_products(
             product_name=p.product_name,
             price=float(p.price),
             description=p.description,
-            image_url=p.image_url
+            image_url=p.image_url,
+            category_id=p.category_id,
+            category_name=p.category.category_name if p.category else None,
+            subcategory_id=p.subcategory_id,
+            subcategory_name=p.subcategory.subcategory_name if p.subcategory else None
         ) for p in products
     ]
 
@@ -118,7 +122,7 @@ async def update_product(
     category_id: Optional[str] = Form(None),
     subcategory_id: Optional[str] = Form(None),
     is_active: Optional[bool] = Form(None),
-    image: Optional[UploadFile] = File(None),
+    image: UploadFile = File(None),
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_admin_user)
 ):
