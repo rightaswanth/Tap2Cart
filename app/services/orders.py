@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, and_
+from sqlalchemy.orm import selectinload
 from app.models.order import Order, OrderItem
 from app.models.product import Product
 from app.schemas.orders import OrderCreate, OrderStatus, OrderUpdate, OrderStatusUpdate, PaymentStatus
@@ -25,7 +26,9 @@ class OrderService:
         elif not is_admin and not user_id:
             return []
 
-        query = query.order_by(desc(Order.created_at)).offset(skip).limit(limit)
+        query = query.options(
+            selectinload(Order.items).selectinload(OrderItem.product)
+        ).order_by(desc(Order.created_at)).offset(skip).limit(limit)
         result = await db.execute(query)
         return result.scalars().all()
 
@@ -36,7 +39,9 @@ class OrderService:
         user_id: Optional[str] = None,
         is_admin: bool = False
     ) -> Optional[Order]:
-        query = select(Order).where(and_(Order.order_id == order_id, Order.is_active == True))
+        query = select(Order).options(
+            selectinload(Order.items).selectinload(OrderItem.product)
+        ).where(and_(Order.order_id == order_id, Order.is_active == True))
 
         if not is_admin and user_id:
             query = query.where(Order.user_id == user_id)
@@ -87,9 +92,19 @@ class OrderService:
                 db.add(order_item)
 
             order.total_amount = total_amount
+            order.total_amount = total_amount
             await db.commit()
-            await db.refresh(order)
-            return order
+            
+            # Re-fetch the order with eager loading to avoid MissingGreenlet error
+            # when accessing relationships in the response model
+            stmt = select(Order).options(
+                selectinload(Order.items).selectinload(OrderItem.product)
+            ).where(Order.order_id == order.order_id)
+            
+            result = await db.execute(stmt)
+            refreshed_order = result.scalars().first()
+            
+            return refreshed_order
 
         except Exception:
             await db.rollback()
