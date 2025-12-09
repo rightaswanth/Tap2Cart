@@ -48,7 +48,10 @@ class AdminService:
         """Get comprehensive dashboard statistics."""
         
         # Total users
-        users_query = select(func.count(User.user_id)).where(User.is_active == True)
+        users_query = select(func.count(User.user_id)).where(
+            User.is_active == True,
+            User.role == 'user'
+        )
         users_result = await db.execute(users_query)
         total_users = users_result.scalar() or 0
         
@@ -149,7 +152,8 @@ class AdminService:
             func.count(Order.order_id).label('total_orders'),
             func.coalesce(func.sum(Order.total_amount), 0).label('total_spent')
         ).outerjoin(Order).where(
-            User.is_active == True
+            User.is_active == True,
+            User.role == 'user'
         ).group_by(User.user_id).order_by(desc('total_spent')).offset(skip).limit(limit)
         
         result = await db.execute(query)
