@@ -104,6 +104,20 @@ class OrderService:
             result = await db.execute(stmt)
             refreshed_order = result.scalars().first()
             
+            # Clear cart items for this user
+            # We need to find the cart items corresponding to the ordered products
+            from app.services.cart import CartService
+            
+            # Get current user's cart items
+            cart_items = await CartService.get_user_cart(db, user_id)
+            
+            # Create a set of product IDs in the order for fast lookup
+            ordered_product_ids = {item.product_id for item in order_data.items}
+            
+            for cart_item in cart_items:
+                if cart_item.product_id in ordered_product_ids:
+                    await CartService.remove_cart_item(db, cart_item.cart_item_id, user_id)
+            
             return refreshed_order
 
         except Exception:
