@@ -48,7 +48,10 @@ class AdminService:
         """Get comprehensive dashboard statistics."""
         
         # Total users
-        users_query = select(func.count(User.user_id)).where(User.is_active == True)
+        users_query = select(func.count(User.user_id)).where(
+            User.is_active == True,
+            User.role == 'user'
+        )
         users_result = await db.execute(users_query)
         total_users = users_result.scalar() or 0
         
