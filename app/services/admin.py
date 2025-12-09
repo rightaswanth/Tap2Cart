@@ -152,7 +152,8 @@ class AdminService:
             func.count(Order.order_id).label('total_orders'),
             func.coalesce(func.sum(Order.total_amount), 0).label('total_spent')
         ).outerjoin(Order).where(
-            User.is_active == True
+            User.is_active == True,
+            User.role == 'user'
         ).group_by(User.user_id).order_by(desc('total_spent')).offset(skip).limit(limit)
         
         result = await db.execute(query)
