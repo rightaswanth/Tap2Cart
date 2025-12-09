@@ -38,7 +38,9 @@ class CartService:
             return None
         
         # Check if item already exists in cart
-        existing_query = select(CartItem).where(
+        existing_query = select(CartItem).options(
+            selectinload(CartItem.product)
+        ).where(
             CartItem.user_id == user_id,
             CartItem.product_id == cart_data.product_id,
             CartItem.is_active == True
@@ -63,6 +65,8 @@ class CartService:
             db.add(cart_item)
             await db.commit()
             await db.refresh(cart_item)
+            # Manually set the product since we already fetched it to avoid lazy load error
+            cart_item.product = product
             return cart_item
     
     @staticmethod
