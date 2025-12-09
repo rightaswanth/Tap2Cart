@@ -20,6 +20,7 @@ class Order(Base):
     total_amount = Column(Numeric(10, 2))
     order_status = Column(String(28)) # e.g., 'Pending', 'Processing', 'Delivered'
     payment_status = Column(String(28)) # e.g., 'Pending', 'Paid', 'Failed'
+    payment_method = Column(String(50)) # e.g., 'Cash on Delivery', 'Credit Card'
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)

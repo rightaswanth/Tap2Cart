@@ -60,12 +60,20 @@ class OrderService:
         try:
             total_amount = Decimal('0.00')
             
+            # Determine payment status
+            # If payment method is NOT 'Cash on Delivery', assume payment is completed (PAID)
+            # Otherwise, it remains PENDING (for COD)
+            payment_status = PaymentStatus.PENDING.value
+            if order_data.payment_method.lower() != "cash on delivery":
+                payment_status = PaymentStatus.PAID.value
+
             order = Order(
                 user_id=user_id,
                 address_id=order_data.address_id,
                 total_amount=total_amount,
                 order_status=OrderStatus.PENDING.value,
-                payment_status=PaymentStatus.PENDING.value
+                payment_status=payment_status,
+                payment_method=order_data.payment_method
             )
 
             db.add(order)

@@ -41,6 +41,7 @@ class OrderBase(BaseModel):
     
 class OrderCreate(OrderBase):
     items: List[OrderItemCreate] = Field(..., min_items=1, description="Order must contain at least one item")
+    payment_method: str = Field(..., description="Payment method (e.g., 'Cash on Delivery', 'Credit Card')")
 
 class OrderUpdate(BaseModel):
     address_id: Optional[str] = None
@@ -57,6 +58,7 @@ class OrderResponse(BaseModel):
     total_amount: Decimal
     order_status: str
     payment_status: str
+    payment_method: Optional[str] = None
     is_active: bool
     created_at: datetime
     updated_at: datetime
