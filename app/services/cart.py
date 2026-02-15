@@ -1,92 +1,121 @@
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, func
 from sqlalchemy.orm import selectinload
 from app.models.cart import CartItem
 from app.models.product import Product
 from app.schemas.cart import CartItemAdd, CartItemUpdate
-from typing import List, Optional
+from typing import List, Optional, Dict
 from decimal import Decimal
 import datetime
 
 class CartService:
+    def __init__(self):
+        self.model = CartItem
     
-    @staticmethod
-    async def get_user_cart(db: AsyncSession, user_id: str) -> List[CartItem]:
-        """Get all active cart items for a user."""
+    async def get_user_cart(    
+        self, 
+        db: AsyncSession, 
+        user_id: Optional[str] = None, 
+        guest_id: Optional[str] = None
+    ) -> List[CartItem]:
         query = select(CartItem).options(
             selectinload(CartItem.product)
-        ).where(
-            CartItem.user_id == user_id,
-            CartItem.is_active == True
-        ).order_by(CartItem.added_at.desc())
+        ).where(CartItem.is_active == True)
+        
+        if user_id:
+            query = query.where(CartItem.user_id == user_id)
+        elif guest_id:
+            query = query.where(CartItem.guest_id == guest_id)
+
+        query = query.order_by(CartItem.added_at.desc())
         
         result = await db.execute(query)
         return result.scalars().all()
     
-    @staticmethod
-    async def add_item_to_cart(db: AsyncSession, user_id: str, cart_data: CartItemAdd) -> Optional[CartItem]:
-        """Add item to cart or update quantity if item already exists."""
-        # Check if product exists and is active
-        product_query = select(Product).where(
-            Product.product_id == cart_data.product_id,
-            Product.is_active == True
-        )
-        product_result = await db.execute(product_query)
-        product = product_result.scalar_one_or_none()
+    async def add_item_to_cart(
+        self, 
+        db: AsyncSession, 
+        user_id: Optional[str], 
+        cart_data: CartItemAdd, 
+        guest_id: Optional[str] = None
+    ) -> Optional[CartItem]:
         
-        if not product:
-            return None
-        
-        # Check if item already exists in cart
-        existing_query = select(CartItem).options(
-            selectinload(CartItem.product)
-        ).where(
-            CartItem.user_id == user_id,
+        query = select(CartItem).options(selectinload(CartItem.product)).where(
             CartItem.product_id == cart_data.product_id,
             CartItem.is_active == True
         )
-        existing_result = await db.execute(existing_query)
-        existing_item = existing_result.scalar_one_or_none()
         
+        if user_id:
+            query = query.where(CartItem.user_id == user_id)
+        elif guest_id:
+            query = query.where(CartItem.guest_id == guest_id)
+
+        existing_item = (await db.execute(query)).scalar_one_or_none()
+
         if existing_item:
-            # Update existing item quantity
             existing_item.quantity += cart_data.quantity
             existing_item.updated_at = datetime.datetime.utcnow()
             await db.commit()
             await db.refresh(existing_item)
             return existing_item
-        else:
-            # Create new cart item
-            cart_item = CartItem(
-                user_id=user_id,
-                product_id=cart_data.product_id,
-                quantity=cart_data.quantity
-            )
-            db.add(cart_item)
-            await db.commit()
-            await db.refresh(cart_item)
-            # Manually set the product since we already fetched it to avoid lazy load error
-            cart_item.product = product
-            return cart_item
+            
     
-    @staticmethod
-    async def get_cart_item(db: AsyncSession, cart_item_id: str, user_id: str) -> Optional[CartItem]:
-        """Get a specific cart item belonging to the user."""
+        product = await db.get(Product, cart_data.product_id)
+        if not product or not product.is_active:
+            return None
+
+        cart_item = CartItem(
+            user_id=user_id,
+            guest_id=guest_id,
+            product_id=cart_data.product_id,
+            quantity=cart_data.quantity
+        )
+        
+        db.add(cart_item)
+        await db.commit()
+        await db.refresh(cart_item)
+
+        cart_item.product = product
+
+        return cart_item
+    
+    async def get_cart_item(
+        self, 
+        db: AsyncSession, 
+        cart_item_id: str, 
+        user_id: Optional[str] = None, 
+        guest_id: Optional[str] = None
+    ) -> Optional[CartItem]:
+        """
+        Get a specific cart item belonging to the user or guest.
+        """
         query = select(CartItem).options(
             selectinload(CartItem.product)
         ).where(
             CartItem.cart_item_id == cart_item_id,
-            CartItem.user_id == user_id,
             CartItem.is_active == True
         )
+        
+        if user_id:
+            query = query.where(CartItem.user_id == user_id)
+        elif guest_id:
+            query = query.where(CartItem.guest_id == guest_id)
+        else:
+            return None
+            
         result = await db.execute(query)
         return result.scalar_one_or_none()
     
-    @staticmethod
-    async def update_cart_item(db: AsyncSession, cart_item_id: str, user_id: str, 
-                             cart_data: CartItemUpdate) -> Optional[CartItem]:
-        """Update cart item quantity."""
-        cart_item = await CartService.get_cart_item(db, cart_item_id, user_id)
+    async def update_cart_item(
+        self, 
+        db: AsyncSession, 
+        cart_item_id: str, 
+        cart_data: CartItemUpdate, 
+        user_id: Optional[str] = None, 
+        guest_id: Optional[str] = None
+    ) -> Optional[CartItem]:
+        cart_item = await self.get_cart_item(db, cart_item_id, user_id, guest_id)
         if not cart_item:
             return None
         
@@ -97,10 +126,14 @@ class CartService:
         await db.refresh(cart_item)
         return cart_item
     
-    @staticmethod
-    async def remove_cart_item(db: AsyncSession, cart_item_id: str, user_id: str) -> bool:
-        """Remove item from cart (soft delete)."""
-        cart_item = await CartService.get_cart_item(db, cart_item_id, user_id)
+    async def remove_cart_item(
+        self, 
+        db: AsyncSession, 
+        cart_item_id: str, 
+        user_id: Optional[str] = None, 
+        guest_id: Optional[str] = None
+    ) -> bool:
+        cart_item = await self.get_cart_item(db, cart_item_id, user_id, guest_id)
         if not cart_item:
             return False
         
@@ -110,9 +143,7 @@ class CartService:
         await db.commit()
         return True
     
-    @staticmethod
-    async def calculate_cart_summary(cart_items: List[CartItem]) -> dict:
-        """Calculate cart summary with totals."""
+    async def calculate_cart_summary(self, cart_items: List[CartItem]) -> dict:
         total_items = sum(item.quantity for item in cart_items)
         total_amount = sum(item.quantity * item.product.price for item in cart_items)
         
@@ -120,3 +151,39 @@ class CartService:
             "total_items": total_items,
             "total_amount": Decimal(str(total_amount))
         }
+
+    async def clear_user_cart_items(
+        self, 
+        db: AsyncSession, 
+        user_id: Optional[str], 
+        product_ids: set[str], 
+        guest_id: Optional[str] = None
+    ) -> None:
+        """
+        Remove specific items from the user's cart. 
+        Intended to be used within a transaction (e.g., during order creation).
+        """
+        if not product_ids:
+            return
+
+        stmt = select(CartItem).where(
+            CartItem.product_id.in_(product_ids),
+            CartItem.is_active == True
+        )
+        
+        if user_id:
+            stmt = stmt.where(CartItem.user_id == user_id)
+        elif guest_id:
+            stmt = stmt.where(CartItem.guest_id == guest_id)
+        else:
+            return
+        result = await db.execute(stmt)
+        cart_items = result.scalars().all()
+
+        for item in cart_items:
+            item.is_active = False
+            item.updated_at = datetime.datetime.utcnow()
+        
+        # Note: No commit here, as this is part of a larger transaction
+
+cart_service = CartService()

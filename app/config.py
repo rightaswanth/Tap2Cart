@@ -21,7 +21,10 @@ class Settings(BaseSettings):
     environment: str  # development / staging / production
     allowed_origins: List[str]
 
+    # Security
     secret_key: str
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 30
     restaurant_name: str
     delivery_radius_km: float
     
