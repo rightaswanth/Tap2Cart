@@ -3,6 +3,7 @@ from typing import Optional, List
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
+from .address import AddressResponse
 
 class OrderStatus(str, Enum):
     PENDING = "Pending"
@@ -23,8 +24,9 @@ class OrderItemBase(BaseModel):
     quantity: int = Field(gt=0, description="Quantity must be greater than 0")
     price_at_purchase: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
 
-class OrderItemCreate(OrderItemBase):
-    pass
+class OrderItemCreate(BaseModel):
+    product_id: str
+    quantity: int = Field(gt=0, description="Quantity must be greater than 0")
 
 class OrderItemResponse(OrderItemBase):
     order_item_id: str
@@ -42,6 +44,8 @@ class OrderBase(BaseModel):
 class OrderCreate(OrderBase):
     items: List[OrderItemCreate] = Field(..., min_items=1, description="Order must contain at least one item")
     payment_method: str = Field(..., description="Payment method (e.g., 'Cash on Delivery', 'Credit Card')")
+    phone_number: Optional[str] = Field(None, description="Required for guest checkout")
+    guest_id: Optional[str] = Field(None, description="Guest ID for cart retrieval if not logged in")
 
 class OrderUpdate(BaseModel):
     address_id: Optional[str] = None
@@ -74,6 +78,26 @@ class OrderSummary(BaseModel):
     payment_status: str
     created_at: datetime
     items_count: int
+    
+    class Config:
+        from_attributes = True
+
+from app.schemas.address import AddressResponse
+
+class OrderTrackingResponse(BaseModel):
+    order_id: str
+    tracking_token: str
+    order_status: str
+    payment_status: str
+    total_amount: Decimal
+    created_at: datetime
+    updated_at: datetime
+    # Address details needed for tracking view
+    address: Optional[AddressResponse] = None 
+    items: List[OrderItemResponse] = []
+    
+    # Mock Delivery Steps for UI
+    delivery_steps: List[dict] = [] 
     
     class Config:
         from_attributes = True

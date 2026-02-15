@@ -5,10 +5,16 @@ from app.schemas.address import AddressCreate, AddressUpdate
 from typing import List, Optional
 import datetime
 
+
 class AddressService:
-    
-    @staticmethod
-    async def get_user_addresses(db: AsyncSession, user_id: str) -> List[Address]:
+    def __init__(self):
+        self.model = Address
+
+    async def get_multi_by_user(
+        self, 
+        db: AsyncSession, 
+        user_id: str
+    ) -> List[Address]:
         """Get all active addresses for a user."""
         query = select(Address).where(
             Address.user_id == user_id,
@@ -17,83 +23,98 @@ class AddressService:
         
         result = await db.execute(query)
         return result.scalars().all()
-    
-    @staticmethod
-    async def get_address_by_id(db: AsyncSession, address_id: str, user_id: str) -> Optional[Address]:
+
+    async def get(
+        self, 
+        db: AsyncSession, 
+        id: str, 
+        user_id: Optional[str] = None
+    ) -> Optional[Address]:
         """Get a specific address."""
         query = select(Address).where(
-            Address.address_id == address_id,
-            Address.user_id == user_id,
+            Address.address_id == id,
             Address.is_active == True
         )
+        if user_id:
+            query = query.where(Address.user_id == user_id)
+            
         result = await db.execute(query)
         return result.scalar_one_or_none()
-    
-    @staticmethod
-    async def create_address(db: AsyncSession, user_id: str, address_data: AddressCreate) -> Address:
+
+    async def create(
+        self, 
+        db: AsyncSession, 
+        *, 
+        obj_in: AddressCreate, 
+        user_id: str
+    ) -> Address:
         """Create a new address."""
         # If this is set as default, unset other defaults
-        if address_data.is_default:
-            await AddressService._unset_defaults(db, user_id)
+        if obj_in.is_default:
+            await self._unset_defaults(db, user_id)
             
-        address = Address(
+        # We need to manually inject user_id since it's not in AddressCreate usually?
+        # AddressCreate in schema usually has street, city etc. user_id is from token.
+        # CRUDBase.create takes obj_in. We can convert to dict and add user_id.
+        
+        db_obj = Address(
             user_id=user_id,
-            street_address=address_data.street_address,
-            city=address_data.city,
-            state=address_data.state,
-            postal_code=address_data.postal_code,
-            country=address_data.country,
-            is_default=address_data.is_default
+            **obj_in.model_dump()
         )
         
-        db.add(address)
+        db.add(db_obj)
         await db.commit()
-        await db.refresh(address)
-        return address
-    
-    @staticmethod
-    async def update_address(
+        await db.refresh(db_obj)
+        return db_obj
+
+    async def update(
+        self, 
         db: AsyncSession, 
-        address_id: str, 
-        user_id: str, 
-        address_data: AddressUpdate
+        *, 
+        db_obj: Address, 
+        obj_in: AddressUpdate | dict
+    ) -> Address:
+         # Check default flag in update
+        if isinstance(obj_in, dict):
+            update_data = obj_in
+        else:
+            update_data = obj_in.model_dump(exclude_unset=True)
+            
+        if update_data.get("is_default"):
+            await self._unset_defaults(db, db_obj.user_id)
+            
+        # Inline logic from CRUDBase.update
+        for field in update_data:
+            if hasattr(db_obj, field):
+                setattr(db_obj, field, update_data[field])
+        
+        db.add(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
+        return db_obj
+
+    async def remove(
+        self, 
+        db: AsyncSession, 
+        *, 
+        id: str,
+        user_id: Optional[str] = None
     ) -> Optional[Address]:
-        """Update an existing address."""
-        address = await AddressService.get_address_by_id(db, address_id, user_id)
-        if not address:
+        # Soft delete
+        obj = await self.get(db, id=id, user_id=user_id)
+        if not obj:
             return None
         
-        # If setting as default, unset other defaults
-        if address_data.is_default:
-            await AddressService._unset_defaults(db, user_id)
-        
-        update_data = address_data.model_dump(exclude_unset=True)
-        for field, value in update_data.items():
-            setattr(address, field, value)
-            
-        address.updated_at = datetime.datetime.utcnow()
-        
+        obj.is_active = False
+        obj.updated_at = datetime.datetime.utcnow()
         await db.commit()
-        await db.refresh(address)
-        return address
-    
-    @staticmethod
-    async def delete_address(db: AsyncSession, address_id: str, user_id: str) -> bool:
-        """Soft delete an address."""
-        address = await AddressService.get_address_by_id(db, address_id, user_id)
-        if not address:
-            return False
-        
-        address.is_active = False
-        address.updated_at = datetime.datetime.utcnow()
-        
-        await db.commit()
-        return True
-        
-    @staticmethod
-    async def _unset_defaults(db: AsyncSession, user_id: str):
+        return obj
+
+    async def _unset_defaults(self, db: AsyncSession, user_id: str):
         """Unset is_default for all user addresses."""
         stmt = update(Address).where(
             Address.user_id == user_id
         ).values(is_default=False)
         await db.execute(stmt)
+
+address_service = AddressService()

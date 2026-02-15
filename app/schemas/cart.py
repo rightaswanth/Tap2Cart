@@ -25,7 +25,8 @@ class ProductInfo(BaseModel):
 
 class CartItemResponse(BaseModel):
     cart_item_id: str
-    user_id: str
+    user_id: Optional[str] = None
+    guest_id: Optional[str] = None
     product_id: str
     quantity: int
     added_at: datetime

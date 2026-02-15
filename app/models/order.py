@@ -22,6 +22,7 @@ class Order(Base):
     payment_status = Column(String(28)) # e.g., 'Pending', 'Paid', 'Failed'
     payment_method = Column(String(50)) # e.g., 'Cash on Delivery', 'Credit Card'
     is_active = Column(Boolean, default=True)
+    tracking_token = Column(String(100), unique=True, index=True, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from app.core.database import get_db
-from app.services.address import AddressService
+from app.services.address import address_service
 from app.schemas.address import AddressCreate, AddressUpdate, AddressResponse
 
 router = APIRouter(tags=["address"])
@@ -13,7 +13,7 @@ async def get_addresses(
     db: AsyncSession = Depends(get_db)
 ):
     """Get all active addresses for a user."""
-    return await AddressService.get_user_addresses(db, user_id)
+    return await address_service.get_multi_by_user(db, user_id=user_id)
 
 @router.post("/", response_model=AddressResponse, status_code=status.HTTP_201_CREATED, summary="Add new address")
 async def create_address(
@@ -22,7 +22,7 @@ async def create_address(
     db: AsyncSession = Depends(get_db)
 ):
     """Add a new address for the user."""
-    return await AddressService.create_address(db, user_id, address_data)
+    return await address_service.create(db, obj_in=address_data, user_id=user_id)
 
 @router.put("/{address_id}", response_model=AddressResponse, summary="Update address")
 async def update_address(
@@ -32,10 +32,12 @@ async def update_address(
     db: AsyncSession = Depends(get_db)
 ):
     """Update an existing address."""
-    address = await AddressService.update_address(db, address_id, user_id, address_data)
+    # First get the address to ensure ownership
+    address = await address_service.get(db, id=address_id, user_id=user_id)
     if not address:
         raise HTTPException(status_code=404, detail="Address not found")
-    return address
+        
+    return await address_service.update(db, db_obj=address, obj_in=address_data)
 
 @router.delete("/{address_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete address")
 async def delete_address(
@@ -44,7 +46,7 @@ async def delete_address(
     db: AsyncSession = Depends(get_db)
 ):
     """Delete (soft delete) an address."""
-    success = await AddressService.delete_address(db, address_id, user_id)
-    if not success:
+    result = await address_service.remove(db, id=address_id, user_id=user_id)
+    if not result:
         raise HTTPException(status_code=404, detail="Address not found")
     return
